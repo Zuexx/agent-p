@@ -1,0 +1,10 @@
+services:
+  - name: ffmpeg-service
+    template: PREBUILT
+    spec:
+      source:
+        image: zuexx/ffmpeg-service:latest
+      ports:
+        - id: http
+          port: 8001
+          type: HTTP

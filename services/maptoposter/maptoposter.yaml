@@ -1,0 +1,10 @@
+services:
+  - name: maptoposter-service
+    template: PREBUILT
+    spec:
+      source:
+        image: zuexx/maptoposter-service:latest
+      ports:
+        - id: http
+          port: 8000
+          type: HTTP
