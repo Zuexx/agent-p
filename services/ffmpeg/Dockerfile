@@ -13,7 +13,7 @@ RUN uv pip install fastapi uvicorn requests
 
 RUN mkdir -p /data
 
-COPY /service/ffmpeg/app.py /app/app.py
+COPY /services/ffmpeg/app.py /app/app.py
 
 EXPOSE 8001
 
