@@ -1,0 +1,819 @@
+{
+  "name": "agent.p - line messaging",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "allowFileUploads": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -160,
+        -144
+      ],
+      "id": "5f44e7e1-3b8f-455b-ab21-a92992349d81",
+      "name": "When chat message received",
+      "webhookId": "8c2d6d5c-d51d-4f26-87a2-4bab0a718428"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3-flash-preview",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -416
+      ],
+      "id": "34096c6d-8a1d-4aea-aa76-1cbd970b74e5",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zpep3Bt97y1hpIXP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Line Messaging Trigger').item.json.source.userId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        16,
+        -416
+      ],
+      "id": "5e8ce1cd-b520-43e2-a28c-e1101e206542",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolWikipedia",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -416
+      ],
+      "id": "cde9613b-363b-4ed6-bf9c-c70a08d4994d",
+      "name": "Wikipedia"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+      "typeVersion": 1,
+      "position": [
+        272,
+        -416
+      ],
+      "id": "54df8ae9-6929-46c1-a6bd-47a7fdc46a20",
+      "name": "Calculator"
+    },
+    {
+      "parameters": {
+        "toolDescription": "搜尋網際網路資訊",
+        "method": "POST",
+        "url": "https://google.serper.dev/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "8f57d8a63fba29ac54d6d66acc68c47b729f6a76"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            },
+            {
+              "name": "gl",
+              "value": "tw"
+            },
+            {
+              "name": "hl",
+              "value": "zh-tw"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        -416
+      ],
+      "id": "281ed6f7-77c8-4ac5-b45b-09b48f0b3236",
+      "name": "Search"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=依照{{ $json.message.type }}判斷使用者輸入的訊息類型\n1. 如果類型是\"text\", 使用者的聊天或提問:{{ $json.message.text }}\n2. 如果類型是\"image\", 使用者上傳圖片data\n3. 如果不是\"text\"也不是\"image\", 直接輸出\"我只能瞭解文字和圖片\"\n4. 回應時不要加上根據您的判斷規則這些冗贅的文字\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=# 背景資料\n地點：台北市信義區、桃園市桃園區\n地點目前時間：{{ $now.format('yyyy-MM-dd HH:mm:ss') }}\n輸出語言：繁體中文\n\n# 角色:你是一個生活伴侶，具備各種專業知識及生活常識，你能達成交付的各種任務，並在生活上給予適時的幫助、激勵及療癒\n\n# 背景資料地點：台北市信義區、桃園市桃園區\n地點目前時間：{{ $now.format('yyyy-MM-dd HH:mm:ss') }}\n\n# 輸出規則:\n    1. 當使用者輸入全英文內容時, 使用<Text-To-Speech>進行回覆\n    2. 當使用者上傳圖片檔,依照<圖片類型工作流程>進行回覆\n    3. 當問題涉及行程、會議、提醒、查看日程、建立/修改/刪除/查詢 Google 日曆(行事曆)事件時使用\"ScheduleAgent\",不要再請使用者確認\n    4. 最終輸出會是文字模式,包括表格、斷行、條列...等應該保持可讀性\n    5. 回覆時嚴格遵守指定格式, 不要回覆多餘的文字, 除非有特別需要\n    6. 最終輸出字數小於150字比較適當,除非有特別需要\n    7. 輸出語言:繁體中文\n# Text-To-Speech工作流程:\n    **工作處理流程:**\n      1. 辨識文字內容為全英文, 具為單字或片語時, 不要輸出其他額外的文字, 直接輸出 {{ $('Line Messaging Trigger').item.json.message.text }}\n      2. 辨識文字內容為全英文, 且為語句時, 以較正式的口吻, 進行文法修飾, 錯字/用語的調整, 並輸出以下json\n      {\n        \"original\": {{ $('Line Messaging Trigger').item.json.message.text }},\n        \"suggest\": [Adjust Text],\n        \"tts\": false\n      }\n# 圖片類型工作流程:\n  ## 類型 1:食物:判斷圖片中包含食物、飲料、餐點\n    **工作處理流程:**\n      1. 詳細辨識圖片中的<主要食物項目>,<主要食物項目>應不大於3項(依熱量順序)\n      2. <整份食物描述>為主要食物項目組成的字串,若字串長度大於20個字,只取前20個字\n      3. 估算每項<主要食物項目>的重量(單位:克)\n      4. 估算<整份食物>的總熱量(單位:千卡)和3大營養素總重(單位:克)\n      5. 先使用\"SaveFood\"工具\n      6. 再使用\"CalFood\"工具\n      7. 按照以下格式輸出食物描述:   \n      ```\n      這是一份<整份食物描述>。包含:   \n      - [食物項目1]   約 [重量]g   \n      - [食物項目2]   約 [重量]g   \n      - 總熱量:  kcal   \n      - 碳水化合物: g   \n      - 蛋白質: g   \n      - 脂肪: g      \n      \n      - [今日總合]   \n      - 🔥熱量:  kcal   \n      - 🍚碳水化合物: g   \n      - 💪蛋白質: g   \n      - 🧈脂肪: g\n      ```\n  ## 類型 2:發票\n    **判斷標準:** \n      圖片中包含發票字樣\n    **工作處理流程:**\n      1. 詳細辨識圖片中的發票項目\n      2. 提取發票上的關鍵資訊:   \n        - 發票日期:發票上的年月日(西元YYYY-MM-DD)   \n        - 發票號碼:前兩碼為英文大寫字母加8碼數字,中間可能有-號,不用輸出中間-號   \n        - 發票金額:總計金額\n      3. 使用\"SaveReceipt\"工具\n      4. 按照以下格式輸出:   \n      ```\n      ✅這是一張發票。資訊如下:   \n      - 📅發票日期: <發票日期>   \n      - 📄發票號碼: <發票號碼>   \n      - 💰發票金額: <發票金額>\n      ```",
+          "maxIterations": 3,
+          "returnIntermediateSteps": true,
+          "passthroughBinaryImages": true,
+          "enableStreaming": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        176,
+        -640
+      ],
+      "id": "cad66dd2-2a1d-4d2e-9966-b51eb6496e95",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "=#功能:\n- 接收下方json格式的食物資料,並進行資料儲存至google sheets (insert a row)\n\n# json格式的食物資料\n{\n    date:{{ $now.format('yyyy-MM-dd') }},\n    name:<整份食物>的食物描述,\n    calories:kcal,\n    carbohydrate:g,\n    protein:g,\n    fat:g\n}",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1RwVMKV3KZJoCwli401j3um7wfRAuJAXV61NB5onfQ2E",
+          "mode": "list",
+          "cachedResultName": "n8n-data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RwVMKV3KZJoCwli401j3um7wfRAuJAXV61NB5onfQ2E/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "food",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RwVMKV3KZJoCwli401j3um7wfRAuJAXV61NB5onfQ2E/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('date', ``, 'string') }}",
+            "name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('name', ``, 'string') }}",
+            "carlories": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('carlories', ``, 'string') }}",
+            "carbohydrate": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('carbohydrate', ``, 'string') }}",
+            "protein": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('protein', ``, 'string') }}",
+            "fat": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fat', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "carlories",
+              "displayName": "carlories",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "carbohydrate",
+              "displayName": "carbohydrate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "protein",
+              "displayName": "protein",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fat",
+              "displayName": "fat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        -416
+      ],
+      "id": "dad35e69-66df-4eb9-a949-10700a59519b",
+      "name": "SaveFood",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hIrM35oeBXPyFHng",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "=# 使用此工具,加總今日攝取的總熱量和3大營養素\n- 用法:使用今日日期{{ $now.format('yyyy-MM-dd') }},於google sheet中取得今日所攝取的食物項目資料並加總今日攝取的總熱量和3大營養素",
+        "documentId": {
+          "__rl": true,
+          "value": "1RwVMKV3KZJoCwli401j3um7wfRAuJAXV61NB5onfQ2E",
+          "mode": "list",
+          "cachedResultName": "n8n-data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RwVMKV3KZJoCwli401j3um7wfRAuJAXV61NB5onfQ2E/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "food",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RwVMKV3KZJoCwli401j3um7wfRAuJAXV61NB5onfQ2E/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "date",
+              "lookupValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        656,
+        -416
+      ],
+      "id": "428d3027-e8f7-4594-92d9-e1bde4f06b05",
+      "name": "CalFood",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hIrM35oeBXPyFHng",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "textToSpeech",
+        "text": "={{ $json.output }}",
+        "languageCode": "en-US",
+        "specificVoice": "F",
+        "additionalOptions": {
+          "saveToTmp": true,
+          "filename": "={{(+new Date).toString(36).slice(-5) + Math.random().toString(36).substr(2, 5)}}"
+        }
+      },
+      "type": "n8n-nodes-google-speech.googleSpeech",
+      "typeVersion": 1,
+      "position": [
+        784,
+        -768
+      ],
+      "id": "8b2b263b-4e91-45d4-b4f3-54b95384052a",
+      "name": "TextToSpeech",
+      "notesInFlow": false,
+      "credentials": {
+        "googleSpeechApi": {
+          "id": "39QfAAp86y9AlYMZ",
+          "name": "Google Speech account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "events": [
+          "*"
+        ]
+      },
+      "type": "@aotoki/n8n-nodes-line-messaging.lineMessagingTrigger",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        -656
+      ],
+      "id": "d08da15f-d451-4ab4-9f49-687d7cfc9ba3",
+      "name": "Line Messaging Trigger",
+      "webhookId": "f48ba80d-d831-451b-8b1c-02465dbfef88",
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "swHWi3nuSJe5bZnm",
+          "name": "Line Messaging account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "messageId": "={{ $('Line Messaging Trigger').item.json.message.id }}",
+        "additionalOptions": {}
+      },
+      "type": "@aotoki/n8n-nodes-line-messaging.lineMessagingData",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -768
+      ],
+      "id": "f1f07248-14a9-49e6-8b73-83853c6717cc",
+      "name": "Line Messaging Data",
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "swHWi3nuSJe5bZnm",
+          "name": "Line Messaging account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "486fd8bf-00f8-4f5b-8916-7c54663b2d76",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "=^[A-Za-z0-9\\s.,!?;:'\"“”‘’()\\-\\r\\n]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        528,
+        -640
+      ],
+      "id": "6baa5b1d-e38a-4f80-950f-5b42945a43ed",
+      "name": "Verify Output For TTS"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5ffd1c07-1aa3-46d9-a8d7-e2fa0d047510",
+              "leftValue": "={{ $json.message.type }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -272,
+        -656
+      ],
+      "id": "d20f47ef-5e91-407b-9b36-d473814a2ab5",
+      "name": "Verify Message Type"
+    },
+    {
+      "parameters": {
+        "replyToken": "={{ $('Line Messaging Trigger').item.json.replyToken }}",
+        "messages": {
+          "values": [
+            {
+              "text": "={{ $json.output }}"
+            }
+          ]
+        }
+      },
+      "type": "@aotoki/n8n-nodes-line-messaging.lineMessaging",
+      "typeVersion": 1,
+      "position": [
+        944,
+        -576
+      ],
+      "id": "7cd97ada-df8b-4c3b-9e38-4d6db93b81bd",
+      "name": "Line Messaging - Reply",
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "swHWi3nuSJe5bZnm",
+          "name": "Line Messaging account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"replyToken\":\"{{ $('Standardized Output').item.json.output.replyToken }}\",\n    \"messages\":[\n        {\n            \"type\":\"audio\",\n            \"originalContentUrl\": \"{{ $('Standardized Output').item.json.output.audioUrl }}\",\n            \"duration\": {{ $('Standardized Output').item.json.output.duration }}\n        }\n    ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1760,
+        -768
+      ],
+      "id": "cdfadb05-f14d-424d-bea6-9b0a6e62b943",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "jrDixgIgWDrQsKBU",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/root/.n8n-files/{{ $('TextToSpeech').item.json.tempFilePath.replace('/tmp/','').replace('.mp3', '.m4a') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1424,
+        -768
+      ],
+      "id": "459cc7c8-b455-4f9d-804a-23ad5603fa98",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "command": "=ffmpeg -i {{ $json.tempFilePath }} -c:a aac -b:a 128k -ar 44100 -movflags +faststart /root/.n8n-files/{{ $json.tempFilePath.replace('/tmp/', '').replace('mp3', 'm4a') }} -y  \n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        944,
+        -768
+      ],
+      "id": "a834b566-5e05-4ab7-abf5-9567fcceee17",
+      "name": "Convert To M4A"
+    },
+    {
+      "parameters": {
+        "command": "=ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 /root/.n8n-files/{{ $('TextToSpeech').item.json.tempFilePath.replace('/tmp/', '').replace('.mp3', '.m4a') }}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        -768
+      ],
+      "id": "96812a43-c983-4b83-a1b8-b493e850b78c",
+      "name": "Get Durations"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b097d1fc-53c1-4323-8eec-a776e2c32669",
+              "name": "stdout",
+              "value": "={{ Math.round($json.stdout.trim() * 1000) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        -768
+      ],
+      "id": "512954a2-d164-48cd-943d-a2f710799bba",
+      "name": "Normalize Duration"
+    },
+    {
+      "parameters": {
+        "jsCode": "var result;\nreturn items.map(item => {\n  try {\n    tmp =  JSON.parse(item.json.output)\n    result = tmp.suggest\n  } catch (e) {\n    result = item.json.output\n  }\n  \n  return {\n    output: result\n  }\n})\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        -576
+      ],
+      "id": "da5b440d-f62d-4869-8b01-8c5600da35b6",
+      "name": "JSON Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 計算 duration\n// const text = $('Line Messaging Trigger').first().json.message.text\n// const cleanText = text.trim().replace(/[^\\w\\s'-]/g, '');\n// const words = cleanText.split(/\\s+/).filter(w => w.length > 0);\n// const wordCount = words.length;\n\n// let duration;\n// if (wordCount === 1) {\n//  duration = 800 + (cleanText.replace(/\\s/g, '').length * 80);\n//} else {\n//  duration = wordCount * 500;\n//}\n//duration = Math.max(1000, Math.min(Math.round(duration * 1.2), 60000));\n\n// console.log('Calculated duration:', duration, 'ms');\n\nreturn {\n  output: {\n    audioUrl: 'https://n8n-mate.zeabur.app/webhook/audio?id=' + $input.first().json.fileName.replace('.m4a', ''),\n    fileName:$input.first().json.fileName.replace('.m4a', ''),\n    duration: $('Normalize Duration').first().json.stdout,\n    replyToken: $('Line Messaging Trigger').first().json.replyToken\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        -768
+      ],
+      "id": "6a59fe18-2817-4225-8453-6ea8ee7ca3ac",
+      "name": "Standardized Output"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        []
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wikipedia": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculator": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SaveFood": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CalFood": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Verify Output For TTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Line Messaging Trigger": {
+      "main": [
+        [
+          {
+            "node": "Verify Message Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TextToSpeech": {
+      "main": [
+        [
+          {
+            "node": "Convert To M4A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Line Messaging Data": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Output For TTS": {
+      "main": [
+        [
+          {
+            "node": "TextToSpeech",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "JSON Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Message Type": {
+      "main": [
+        [
+          {
+            "node": "Line Messaging Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Standardized Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert To M4A": {
+      "main": [
+        [
+          {
+            "node": "Get Durations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Durations": {
+      "main": [
+        [
+          {
+            "node": "Normalize Duration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Duration": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Parser": {
+      "main": [
+        [
+          {
+            "node": "Line Messaging - Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Standardized Output": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "57d7668b-9c5f-41c9-91f9-0919cc3fce2a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0573b26a4b35673bec1261f130ec87547d805306908b49f04b38f71e53137475"
+  },
+  "id": "q0dhlDDhz34Oeazs",
+  "tags": []
+}

@@ -1,0 +1,152 @@
+{
+  "name": "get-tts-audio",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "/audio",
+        "responseMode": "responseNode",
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4d20d7ab-e5fb-43f1-9808-c261d0489f99",
+      "name": "Webhook",
+      "webhookId": "58e5607b-bccc-44d4-9fc7-9941cc869e2a",
+      "retryOnFail": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/root/.n8n-files/{{ $json.query.id }}.m4a",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        192,
+        0
+      ],
+      "id": "35b9141a-133c-4a3e-b2bb-b65e8c9e33dc",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "audio/mpeg"
+              },
+              {
+                "name": "Accept-Ranges",
+                "value": "bytes"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "public, mac-age=3600"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        384,
+        0
+      ],
+      "id": "78a8497f-c07e-4878-957a-f69f84e16296",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        384,
+        160
+      ],
+      "id": "353f5f5e-1977-4fb5-8208-6d85583b94cd",
+      "name": "Wait",
+      "webhookId": "ff059d4d-8461-48f8-bc8c-d55d874d2600"
+    },
+    {
+      "parameters": {
+        "command": "=rm ~/.n8n-files/{{ $('Read/Write Files from Disk').item.json.fileName }}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        592,
+        160
+      ],
+      "id": "8c7850b3-0f35-4e00-9346-52af15b44390",
+      "name": "Execute Command"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "38578eb3-62c6-4e6c-9b2e-567945d29975",
+  "meta": {
+    "instanceId": "0573b26a4b35673bec1261f130ec87547d805306908b49f04b38f71e53137475"
+  },
+  "id": "IcgKQjteSeAL3niA",
+  "tags": []
+}
