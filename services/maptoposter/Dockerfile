@@ -27,7 +27,7 @@ RUN uv pip install -r /app/maptoposter/requirements.txt
 # 建立輸出資料夾
 RUN mkdir -p /data
 
-COPY app.py /app/app.py
+COPY /services/maptoposter/app.py /app/app.py
 
 EXPOSE 8000
 
