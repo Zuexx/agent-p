@@ -1,3 +1,6 @@
+import glob
+import time
+
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 import subprocess
 import uuid
@@ -85,8 +88,12 @@ def run_ffmpeg(job_id, input_path, callback):
     
     try:
         logger.info("🎬 執行 FFmpeg 轉換...")
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)        
         logger.info("✅ FFmpeg 轉換完成")
+
+        # 轉檔完成後，清理舊的 m4a
+        logger.info("🎬 檔完成後，清理舊的 m4a...")
+        cleanup_old_m4a(directory=f"{DATA_DIR}", max_age_minutes=2)
         
         jobs[job_id] = "finished"
 
@@ -208,3 +215,19 @@ def get_duration(file_path):
     except Exception as e:
         logger.warning("⚠️  無法取得 duration: %s", e)
         return None
+
+def cleanup_old_m4a(directory: str, max_age_minutes: int = 2):
+    """刪除超過指定時間的 .m4a 檔案"""
+    now = time.time()
+    max_age_seconds = max_age_minutes * 60
+    
+    m4a_files = glob.glob(os.path.join(directory, "*.m4a"))
+    
+    for file_path in m4a_files:
+        try:
+            file_age = now - os.path.getctime(file_path)  # 建立時間
+            if file_age > max_age_seconds:
+                os.remove(file_path)
+                logging.info(f"🗑️ 已刪除過期 m4a: {file_path} (存在 {file_age/60:.1f} 分鐘)")
+        except Exception as e:
+            logging.warning(f"⚠️ 無法刪除 {file_path}: {e}")
