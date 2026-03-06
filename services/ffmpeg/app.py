@@ -82,13 +82,18 @@ def run_ffmpeg(job_id, input_path, callback):
         logger.info("✅ FFmpeg 轉換完成")
         
         jobs[job_id] = "finished"
-        
+
+        # 取得 duration
+        duration = get_duration
+        logger.info("⏱️  Duration: %s 秒", duration)
+
         # 關鍵：發送 callback
         if callback:
             payload = {
                 "job_id": job_id,
                 "status": "finished",
-                "file": output_file
+                "file": output_file,
+                "duration":duration
             }
             
             logger.info("-" * 80)
@@ -105,7 +110,8 @@ def run_ffmpeg(job_id, input_path, callback):
                         callback,
                         data = {
                             "job_id":job_id,
-                            "status": "finished"
+                            "status": "finished",
+                            "duration": duration
                         },
                         files={
                             "file":(f"{job_id}.m4a", f, "audio/m4a")
@@ -177,3 +183,21 @@ def run_ffmpeg(job_id, input_path, callback):
         
         logger.info("🏁 任務結束 | Job ID: %s | 最終狀態: %s", job_id, jobs.get(job_id, 'unknown'))
         logger.info("=" * 80 + "\n")
+
+def get_duration(file_path):
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "quiet",
+                "-print_format", "json",
+                "-show_format",
+                file_path
+            ],
+            capture_output=True, text=True, check=True
+        )
+        import json
+        info = json.loads(result.stdout)
+        return float(info["format"]["duration"])
+    except Exception as e:
+        logger.warning("⚠️  無法取得 duration: %s", e)
+        return None
