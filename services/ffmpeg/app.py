@@ -43,9 +43,11 @@ async def create_job(
     
     background_tasks.add_task(run_ffmpeg, job_id, input_path, callback)
     
+    duration = get_duration(input_path)
     return {
         "job_id": job_id,
-        "status": "processing"
+        "status": "processing",
+        "duration": duration
     }
 
 @app.get("/jobs/{job_id}")
