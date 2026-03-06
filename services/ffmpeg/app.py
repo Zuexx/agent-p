@@ -54,7 +54,7 @@ def get_status(job_id: str):
     logger.info("📊 查詢狀態 | Job ID: %s | Status: %s", job_id, status)
 
     # 取得 duration
-    duration = get_duration(f"{job_id}.m4a")
+    duration = get_duration(f"{DATA_DIR}/{job_id}.m4a")
     logger.info("⏱️  Duration: %s 秒", duration)
     return {
         "job_id": job_id,
