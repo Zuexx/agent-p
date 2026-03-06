@@ -21,7 +21,7 @@ RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # 安裝依賴
-RUN uv pip install fastapi uvicorn requests
+RUN uv pip install fastapi uvicorn requests python-multipart
 RUN uv pip install -r /app/maptoposter/requirements.txt
 
 # 建立輸出資料夾
