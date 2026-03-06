@@ -52,9 +52,14 @@ async def create_job(
 def get_status(job_id: str):
     status = jobs.get(job_id, "unknown")
     logger.info("📊 查詢狀態 | Job ID: %s | Status: %s", job_id, status)
+
+    # 取得 duration
+    duration = get_duration(f"{job_id}.m4a")
+    logger.info("⏱️  Duration: %s 秒", duration)
     return {
         "job_id": job_id,
-        "status": status
+        "status": status,
+        "duration":duration
     }
 
 def run_ffmpeg(job_id, input_path, callback):
@@ -84,7 +89,7 @@ def run_ffmpeg(job_id, input_path, callback):
         jobs[job_id] = "finished"
 
         # 取得 duration
-        duration = get_duration
+        duration = get_duration(output_file)
         logger.info("⏱️  Duration: %s 秒", duration)
 
         # 關鍵：發送 callback
