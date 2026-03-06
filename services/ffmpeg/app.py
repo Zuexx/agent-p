@@ -100,12 +100,17 @@ def run_ffmpeg(job_id, input_path, callback):
                 import time
                 start_time = time.time()
                 
-                response = requests.post(
-                    callback,
-                    json=payload,
-                    timeout=30,
-                    headers={"Content-Type": "application/json"}
-                )
+                with open(output_file, "rb") as f:
+                    response = requests.post(
+                        callback,
+                        data = {
+                            "job_id":job_id,
+                            "status": "finished"
+                        },
+                        files={
+                            "file":(f"{job_id}.m4a", f, "audio/m4a")
+                        }
+                    )
                 
                 elapsed = time.time() - start_time
                 
