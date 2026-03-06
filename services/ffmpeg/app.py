@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 import subprocess
 import uuid
 import requests
@@ -29,7 +29,7 @@ def health():
 async def create_job(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    callback: str | None = None
+    callback: str | None = Form(None)
 ):
     job_id = str(uuid.uuid4())
     jobs[job_id] = "processing"
